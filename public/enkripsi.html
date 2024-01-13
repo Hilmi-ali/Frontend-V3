@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Algoritma</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Mitr&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Mitr", sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: #f5f5f5;
+      }
+
+      .main {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .nav-logo img {
+        display: block;
+        margin: 0 auto;
+      }
+
+      .container {
+        text-align: center;
+        width: 500px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 20px;
+      }
+
+      input[type="file"] {
+        display: block;
+        margin: 10px auto;
+        padding: 10px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      input[type="password"] {
+        display: block;
+        margin: 10px auto;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        background-color: #4caf50;
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+
+      button:hover {
+        background-color: #45a049;
+      }
+
+      .riwayat {
+        text-align: center;
+        margin-top: 40px;
+        border-top: 2px solid #ddd;
+        padding-top: 20px;
+      }
+
+      .riwayat-de h1 {
+        font-size: 24px;
+        margin-bottom: 10px;
+      }
+
+      .riwayat-de div {
+        margin-bottom: 10px;
+      }
+
+      .riwayat-de div a {
+        text-decoration: none;
+        color: #0366d6;
+        margin-right: 10px;
+      }
+
+      .riwayat-de div a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body
+    style="
+      background-color: #4491ea;
+      background-size: cover;
+      font-family: Georgia, 'Times New Roman', Times, serif;
+    "
+  >
+    <div class="main">
+      <header>
+        <nav>
+          <div class="logo">
+            <a href="http://localhost:4000/" src class="nav-logo"
+              ><img
+                style="height: 60px; width: 150px"
+                src="img/logo.png"
+                alt="Company Logo"
+            /></a>
+          </div>
+        </nav>
+      </header>
+      <div class="container">
+        <div class="content"></div>
+        <h1>Enkripsi File</h1>
+        <label for="images" class="drop-container">
+          <form
+            id="encryptionForm"
+            action="/encrypt"
+            method="POST"
+            enctype="multipart/form-data"
+            class="form-inline"
+            onsubmit="return encryptFile()"
+          >
+            <input
+              type="file"
+              id="images"
+              name="file"
+              accept=".pdf, .jpg, .png, .txt"
+              required
+              onchange="displayFileSize()"
+            />
+            <span id="fileSizeInfo"></span>
+
+            <input
+              type="password"
+              id="pwd"
+              name="key"
+              placeholder="Masukkan kunci"
+              required
+            />
+            <button type="submit">Enkripsi</button>
+          </form>
+        </label>
+        <!-- Detail jenis dan ukuran file setelah enkripsi -->
+        <div class="content"></div>
+        <div class="riwayat">
+          <div class="riwayat-de">
+            <h1>Riwayat Enkripsi</h1>
+            <div id="encryptionLog"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      // Fungsi utilitas untuk membuat elemen div untuk setiap entri log
+      function createLogEntryDiv(filename, type) {
+        const div = document.createElement("div");
+        const span = document.createElement("span");
+        const downloadLink = document.createElement("a");
+
+        span.textContent = filename;
+        downloadLink.href = `/download/${type}/${filename}`;
+        downloadLink.download = filename;
+        downloadLink.textContent = " Download Disini";
+
+        div.appendChild(span);
+        div.appendChild(downloadLink);
+
+        return div;
+      }
+
+      // Ambil riwayat enkripsi dan dekripsi saat halaman dimuat
+      window.addEventListener("DOMContentLoaded", () => {
+        fetch("/")
+          .then((response) => response.text())
+          .then((html) => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, "text/html");
+
+            const encryptionLogDiv = doc.getElementById("encryptionLog");
+
+            const encryptionEntries = Array.from(
+              encryptionLogDiv.getElementsByTagName("span")
+            );
+
+            encryptionEntries.forEach((entry) => {
+              const filename = entry.textContent.trim();
+              const div = createLogEntryDiv(filename, "encrypted");
+              encryptionLogDiv.appendChild(div);
+            });
+          })
+          .catch((error) => {
+            console.error(
+              "Error retrieving encryption and decryption logs:",
+              error
+            );
+          });
+      });
+
+      function displayFileDetails() {
+        const fileInput = document.getElementById("images");
+        const fileSizeInfo = document.getElementById("fileSizeInfo");
+        const fileTypeInfo = document.getElementById("fileTypeInfo");
+
+        if (fileInput.files.length > 0) {
+          const fileSize = fileInput.files[0].size;
+          const fileSizeKB = Math.round(fileSize / 1024); // Convert to KB
+          fileSizeInfo.textContent = `Ukuran File: ${fileSizeKB} KB`;
+
+          const fileType = fileInput.files[0].type;
+          fileTypeInfo.textContent = `Jenis File: ${fileType}`;
+        } else {
+          fileSizeInfo.textContent = "";
+          fileTypeInfo.textContent = "";
+        }
+      }
+
+      //mengetahui ukuran file sebelum di proses
+      function displayFileSize() {
+        const fileInput = document.getElementById("images");
+        const fileSizeInfo = document.getElementById("fileSizeInfo");
+
+        if (fileInput.files.length > 0) {
+          const fileSize = fileInput.files[0].size;
+          const fileSizeKB = Math.round(fileSize / 1024); // Convert to KB
+          fileSizeInfo.textContent = `Ukuran File: ${fileSizeKB} KB`;
+        } else {
+          fileSizeInfo.textContent = "";
+        }
+      }
+
+      // Fungsi untuk menampilkan detail setelah enkripsi
+      function displayEncryptedFileInfo(filename) {
+        const fileInfo = document.getElementById("encryptedFileInfo");
+        const fileType = filename.split(".").pop(); // Mendapatkan jenis file dari ekstensi
+        const fileSize = document.getElementById("images").files[0].size;
+        const fileSizeKB = Math.round(fileSize / 1024); // Convert to KB
+
+        fileInfo.textContent = `File Terenkripsi: ${filename}, Jenis: ${fileType.toUpperCase()}, Ukuran: ${fileSizeKB} KB`;
+      }
+
+      function encryptFile() {
+        const encryptionForm = document.getElementById("encryptionForm");
+        const formData = new FormData(encryptionForm);
+
+        fetch(encryptionForm.action, {
+          method: encryptionForm.method,
+          body: formData,
+        })
+          .then((response) => {
+            if (response.ok) {
+              return response.text();
+            } else {
+              throw new Error("Failed to encrypt file.");
+            }
+          })
+          .then((filename) => {
+            const fileInput =
+              encryptionForm.querySelector('input[type="file"]');
+            displayEncryptedFileInfo(filename);
+            fileInput.value = null; // Clear file input value after encryption
+          })
+          .catch((error) => {
+            console.error("Encryption error:", error);
+          });
+      }
+
+      function displayEncryptedFileInfo(filename) {
+        const fileInfo = document.getElementById("encryptedFileInfo");
+        const fileType = filename.split(".").pop(); // Mendapatkan jenis file dari ekstensi
+        const fileSize = document.getElementById("images").files[0].size;
+        const fileSizeKB = Math.round(fileSize / 1024); // Convert to KB
+
+        fileInfo.textContent = `File Terenkripsi: ${filename}, Jenis: ${fileType.toUpperCase()}, Ukuran: ${fileSizeKB} KB`;
+      }
+
+      function encryptFile() {
+        const encryptionForm = document.getElementById("encryptionForm");
+        const formData = new FormData(encryptionForm);
+
+        fetch(encryptionForm.action, {
+          method: encryptionForm.method,
+          body: formData,
+        })
+          .then((response) => {
+            if (response.ok) {
+              return response.text();
+            } else {
+              throw new Error("Failed to encrypt file.");
+            }
+          })
+          .then((filename) => {
+            const fileInput =
+              encryptionForm.querySelector('input[type="file"]');
+            displayEncryptedFileInfo(filename);
+            fileInput.value = null; // Clear file input value after encryption
+          })
+          .catch((error) => {
+            console.error("Encryption error:", error);
+          });
+
+        // Prevent form submission
+        return false;
+      }
+
+      // Update riwayat enkripsi saat formulir enkripsi disubmit
+      const encryptionForm = document.getElementById("encryptionForm");
+      encryptionForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        const formData = new FormData(encryptionForm);
+        fetch(encryptionForm.action, {
+          method: encryptionForm.method,
+          body: formData,
+        })
+          .then((response) => {
+            if (response.ok) {
+              return response.text();
+            } else {
+              throw new Error("Failed to encrypt file.");
+            }
+          })
+          .then(() => {
+            const fileInput =
+              encryptionForm.querySelector('input[type="file"]');
+            const filename = fileInput.files[0].name;
+            const div = createLogEntryDiv(filename, "encrypted");
+            const encryptionLogDiv = document.getElementById("encryptionLog");
+            encryptionLogDiv.appendChild(div);
+            fileInput.value = null; // Clear file input value after encryption
+          })
+          .catch((error) => {
+            console.error("Encryption error:", error);
+          });
+      });
+    </script>
+  </body>
+</html>

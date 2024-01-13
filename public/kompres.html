@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Mengecilkan Ukuran File</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #f4f4f4;
+      }
+
+      .container {
+        border: 2px solid #ffffff;
+        border-radius: 10px;
+        padding: 20px;
+        width: 80%;
+        max-width: 600px;
+        background-color: rgb(
+          255,
+          255,
+          255
+        ); /* Set background color with opacity */
+        margin: 0 auto; /* Center horizontally */
+        text-align: center; /* Align content in the center */
+      }
+
+      /* Rest of your existing styles */
+
+      h1 {
+        text-align: center;
+        color: #000000;
+      }
+
+      input[type="file"] {
+        display: block;
+        margin: 20px auto;
+        padding: 10px;
+        border: 2px solid #ccc;
+        border-radius: 5px;
+        outline: none;
+        width: calc(
+          100% - 24px
+        ); /* Adjusted width to accommodate padding and borders */
+        box-sizing: border-box; /* Ensures the width includes padding and borders */
+      }
+
+      button {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        background-color: #007bff;
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+
+      button:hover {
+        background-color: #0056b3;
+      }
+
+      #status {
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      a {
+        text-decoration: none;
+        color: #007bff;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .download {
+        color: #ffffff;
+      }
+    </style>
+  </head>
+
+  <body
+    style="
+      background-color: #333;
+      background-size: cover;
+      font-family: Georgia, 'Times New Roman', Times, serif;
+    "
+  >
+    <div class="container">
+      <div class="logo">
+        <a href="http://localhost:4000/" src class="nav-logo"
+          ><img
+            style="height: 60px; width: 150px"
+            src="img/logo.png"
+            alt="Company Logo"
+        /></a>
+      </div>
+      <h1>Mengecilkan Ukuran File</h1>
+      <input type="file" id="fileInput" accept=".jpg, .jpeg, .png" required />
+      <p id="fileSizeInfo" style="margin-top: 10px; color: #000000"></p>
+      <button onclick="compressAndResize()">Mengecilkan</button>
+      <div
+        class="detail"
+        style="
+          background-color: #ffffff;
+          width: 300px;
+          margin-left: 150px;
+          border-radius: 7px;
+        "
+      >
+        <div
+          id="fileDetails"
+          style="text-align: center; margin-top: 10px"
+        ></div>
+        <div
+          id="fileDetails"
+          style="text-align: center; margin-top: 10px"
+        ></div>
+        <div
+          class="download"
+          id="status"
+          style="
+            background-color: rgb(165, 163, 35);
+            width: 100px;
+            margin-left: 100px;
+            border-radius: 5px;
+          "
+        ></div>
+      </div>
+    </div>
+
+    <script>
+      function compressAndResize() {
+        const fileInput = document.getElementById("fileInput");
+        const file = fileInput.files[0];
+
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (event) {
+            const img = new Image();
+            img.onload = function () {
+              const canvas = document.createElement("canvas");
+              const ctx = canvas.getContext("2d");
+              canvas.width = img.width / 2; // Misalnya, mengurangi lebar gambar setengahnya
+              canvas.height = img.height / 2; // Misalnya, mengurangi tinggi gambar setengahnya
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+              canvas.toBlob(function (blob) {
+                const zip = new JSZip();
+                const compressedFileName =
+                  file.name.replace(/\.[^/.]+$/, "") +
+                  "_smaller." +
+                  file.name.split(".").pop();
+
+                zip.file(compressedFileName, blob);
+
+                zip.generateAsync({ type: "blob" }).then(function (content) {
+                  const downloadLink = document.createElement("a");
+                  downloadLink.href = URL.createObjectURL(content);
+                  downloadLink.download = "images.zip"; // Nama file ZIP
+                  downloadLink.textContent = " Download ZIP";
+
+                  const status = document.getElementById("status");
+                  status.innerHTML = "";
+                  status.appendChild(downloadLink);
+
+                  // Menampilkan detail ukuran file dan jenis file
+                  const fileDetails = document.getElementById("fileDetails");
+                  fileDetails.innerHTML = `
+                <p>Jenis : ${file.type}</p>
+                <p>Ukuran : ${formatBytes(content.size)}</p>
+              `;
+                });
+              }, file.type);
+            };
+            img.src = event.target.result;
+          };
+
+          reader.onerror = function (error) {
+            console.error("Error reading the file:", error);
+          };
+
+          reader.readAsDataURL(file);
+        } else {
+          console.error("Please select a file.");
+        }
+      }
+
+      document
+        .getElementById("fileInput")
+        .addEventListener("change", function () {
+          const fileInput = this;
+          const fileSizeInfo = document.getElementById("fileSizeInfo");
+
+          if (fileInput.files.length > 0) {
+            const fileSize = formatBytes(fileInput.files[0].size);
+            fileSizeInfo.textContent = `Ukuran File: ${fileSize}`;
+          } else {
+            fileSizeInfo.textContent = "";
+          }
+        });
+
+      // Fungsi untuk mengonversi ukuran file ke format yang lebih mudah dibaca
+      function formatBytes(bytes, decimals = 2) {
+        if (bytes === 0) return "0 Bytes";
+
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+        return (
+          parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i]
+        );
+      }
+    </script>
+  </body>
+</html>
